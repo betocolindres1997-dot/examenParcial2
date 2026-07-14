@@ -6,6 +6,18 @@
     <title>MC Infrastructure - Monitor de Servidores</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        :root {
+            --bg-main: #05080d;
+            --bg-accent: #0c1422;
+            --surface: #111827;
+            --surface-soft: #1f2937;
+            --border: #374151;
+            --text-main: #e5e7eb;
+            --text-muted: #9ca3af;
+            --blue-dark: #1e3a8a;
+            --blue-mid: #2563eb;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -14,7 +26,9 @@
         
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: var(--text-main);
+            background: radial-gradient(circle at 15% 20%, #111827 0%, var(--bg-main) 50%),
+                        linear-gradient(145deg, #030712 0%, var(--bg-accent) 100%);
             min-height: 100vh;
             padding: 20px;
         }
@@ -25,16 +39,21 @@
         }
         
         .header {
-            background: white;
+            background: linear-gradient(145deg, #111827 0%, #0b1220 100%);
+            border: 1px solid var(--border);
             border-radius: 10px;
             padding: 20px;
             margin-bottom: 20px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
         }
         
         .header h1 {
-            color: #333;
+            color: #dbeafe;
             margin-bottom: 10px;
+        }
+
+        #lastUpdate {
+            color: var(--text-muted);
         }
         
         .status-badge {
@@ -63,17 +82,18 @@
         }
         
         .card {
-            background: white;
+            background: linear-gradient(160deg, #111827 0%, #0f172a 100%);
+            border: 1px solid var(--border);
             border-radius: 10px;
             padding: 20px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
         }
         
         .card h2 {
-            color: #4a5568;
+            color: #bfdbfe;
             margin-bottom: 15px;
             padding-bottom: 10px;
-            border-bottom: 2px solid #e2e8f0;
+            border-bottom: 2px solid #1f2937;
         }
         
         .metric {
@@ -81,7 +101,7 @@
             justify-content: space-between;
             align-items: center;
             padding: 10px 0;
-            border-bottom: 1px solid #edf2f7;
+            border-bottom: 1px solid #273142;
         }
         
         .metric:last-child {
@@ -89,27 +109,28 @@
         }
         
         .metric-label {
-            color: #718096;
+            color: var(--text-muted);
             font-weight: 500;
         }
         
         .metric-value {
-            color: #2d3748;
+            color: var(--text-main);
             font-weight: bold;
         }
         
         .progress-bar {
             width: 100%;
             height: 20px;
-            background: #e2e8f0;
+            background: #1f2937;
             border-radius: 10px;
             overflow: hidden;
             margin: 10px 0;
+            border: 1px solid #374151;
         }
         
         .progress-fill {
             height: 100%;
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(90deg, var(--blue-dark) 0%, var(--blue-mid) 100%);
             transition: width 0.3s ease;
             display: flex;
             align-items: center;
@@ -135,15 +156,15 @@
             justify-content: space-between;
             align-items: center;
             padding: 8px;
-            border-bottom: 1px solid #edf2f7;
+            border-bottom: 1px solid #273142;
         }
         
         .process-item:hover {
-            background: #f7fafc;
+            background: #1f2937;
         }
         
         .refresh-btn {
-            background: #667eea;
+            background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%);
             color: white;
             border: none;
             padding: 10px 20px;
@@ -154,15 +175,15 @@
         }
         
         .refresh-btn:hover {
-            background: #5a67d8;
+            background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
         }
         
         .error {
-            color: #e53e3e;
-            background: #fff5f5;
+            color: #fecaca;
+            background: #2a0d12;
             padding: 10px;
             border-radius: 5px;
-            border: 1px solid #feb2b2;
+            border: 1px solid #7f1d1d;
         }
         
         @keyframes pulse {
@@ -182,7 +203,7 @@
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
                     <span class="status-badge status-online" id="apiStatus">API Online</span>
-                    <span id="lastUpdate" style="margin-left: 20px; color: #718096;"></span>
+                    <span id="lastUpdate" style="margin-left: 20px;"></span>
                 </div>
                 <button class="refresh-btn" onclick="refreshAll()">🔄 Actualizar</button>
             </div>
@@ -245,7 +266,7 @@
                 <div class="chart-container">
                     <canvas id="historyChart"></canvas>
                 </div>
-                <div id="historySummary" style="font-size: 14px; color: #4a5568;">Cargando...</div>
+                <div id="historySummary" style="font-size: 14px; color: #9ca3af;">Cargando...</div>
             </div>
         </div>
     </div>
@@ -259,7 +280,7 @@
                 type: 'doughnut',
                 data: {
                     labels: ['Usado', 'Libre'],
-                    datasets: [{ data: [0, 100], backgroundColor: ['#667eea', '#e2e8f0'] }]
+                    datasets: [{ data: [0, 100], backgroundColor: ['#1d4ed8', '#374151'] }]
                 },
                 options: { responsive: true, maintainAspectRatio: false }
             });
@@ -269,7 +290,7 @@
                 type: 'doughnut',
                 data: {
                     labels: ['Usado', 'Disponible'],
-                    datasets: [{ data: [0, 100], backgroundColor: ['#764ba2', '#e2e8f0'] }]
+                    datasets: [{ data: [0, 100], backgroundColor: ['#1e3a8a', '#374151'] }]
                 },
                 options: { responsive: true, maintainAspectRatio: false }
             });
@@ -283,16 +304,16 @@
                         {
                             label: 'CPU %',
                             data: [],
-                            borderColor: '#2563eb',
-                            backgroundColor: 'rgba(37, 99, 235, 0.2)',
+                            borderColor: '#60a5fa',
+                            backgroundColor: 'rgba(96, 165, 250, 0.15)',
                             fill: false,
                             tension: 0.35
                         },
                         {
                             label: 'Memoria %',
                             data: [],
-                            borderColor: '#7c3aed',
-                            backgroundColor: 'rgba(124, 58, 237, 0.2)',
+                            borderColor: '#1e3a8a',
+                            backgroundColor: 'rgba(30, 58, 138, 0.2)',
                             fill: false,
                             tension: 0.35
                         }
@@ -396,12 +417,12 @@
             let html = '';
             partitions.forEach(part => {
                 html += `
-                    <div style="margin-bottom: 15px; padding: 10px; background: #f7fafc; border-radius: 5px;">
+                    <div style="margin-bottom: 15px; padding: 10px; background: #1f2937; border: 1px solid #374151; border-radius: 5px; color: #e5e7eb;">
                         <strong>${part.mountpoint}</strong> (${part.device})
                         <div class="progress-bar" style="margin-top: 10px;">
                             <div class="progress-fill" style="width: ${part.percent}%">${part.percent}%</div>
                         </div>
-                        <div style="display: flex; justify-content: space-between; margin-top: 5px; font-size: 12px;">
+                        <div style="display: flex; justify-content: space-between; margin-top: 5px; font-size: 12px; color: #d1d5db;">
                             <span>Usado: ${part.used_gb} GB</span>
                             <span>Total: ${part.total_gb} GB</span>
                         </div>
@@ -427,7 +448,7 @@
                 html += `
                     <div class="process-item">
                         <span>${proc.name || 'Unknown'} (PID: ${proc.pid})</span>
-                        <span style="color: #667eea; font-weight: bold;">CPU: ${(proc.cpu_percent || 0).toFixed(1)}%</span>
+                        <span style="color: #60a5fa; font-weight: bold;">CPU: ${(proc.cpu_percent || 0).toFixed(1)}%</span>
                     </div>
                 `;
             });
