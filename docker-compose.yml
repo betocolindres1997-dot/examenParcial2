@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  api-service:
+    build: 
+      context: ./api-service
+      dockerfile: Dockerfile
+    container_name: mc-api-service
+    hostname: api-service
+    restart: unless-stopped
+    networks:
+      - monitor-net
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - /proc:/proc:ro  # Solo lectura para acceder a estadísticas del sistema
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  dashboard-service:
+    build:
+      context: ./dashboard-service
+      dockerfile: Dockerfile
+    container_name: mc-dashboard
+    hostname: dashboard-service
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    networks:
+      - monitor-net
+    environment:
+      - API_URL=http://api-service:8000
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - api-service
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  monitor-net:
+    name: monitor-net
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16
+          gateway: 172.25.0.1
