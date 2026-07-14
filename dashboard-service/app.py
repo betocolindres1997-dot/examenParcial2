@@ -61,5 +61,12 @@ def proxy_processes():
     limit = request.args.get('limit', 10)
     return jsonify(get_api_data(f'/api/processes?limit={limit}'))
 
+
+@app.route('/api/proxy/history')
+def proxy_history():
+    """Proxy para obtener historial de métricas"""
+    limit = request.args.get('limit', 20)
+    return jsonify(get_api_data(f'/api/history?limit={limit}'))
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=False)

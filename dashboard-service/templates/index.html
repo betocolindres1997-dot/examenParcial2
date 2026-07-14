@@ -238,11 +238,20 @@
                 <h2>📊 Top Procesos</h2>
                 <div class="process-list" id="processInfo">Cargando...</div>
             </div>
+
+            <!-- Historial -->
+            <div class="card">
+                <h2>🕒 Historial CPU y Memoria</h2>
+                <div class="chart-container">
+                    <canvas id="historyChart"></canvas>
+                </div>
+                <div id="historySummary" style="font-size: 14px; color: #4a5568;">Cargando...</div>
+            </div>
         </div>
     </div>
     
     <script>
-        let cpuChart, memoryChart;
+        let cpuChart, memoryChart, historyChart;
         
         // Inicializar gráficos
         function initCharts() {
@@ -287,6 +296,42 @@
                     }
                 }
             });
+
+            const ctx3 = document.getElementById('historyChart').getContext('2d');
+            historyChart = new Chart(ctx3, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'CPU %',
+                            data: [],
+                            borderColor: '#2563eb',
+                            backgroundColor: 'rgba(37, 99, 235, 0.2)',
+                            tension: 0.35,
+                            fill: false,
+                        },
+                        {
+                            label: 'Memoria %',
+                            data: [],
+                            borderColor: '#7c3aed',
+                            backgroundColor: 'rgba(124, 58, 237, 0.2)',
+                            tension: 0.35,
+                            fill: false,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
         }
         
         // Actualizar todos los datos
@@ -298,7 +343,8 @@
                 fetchMemoryInfo(),
                 fetchDiskInfo(),
                 fetchNetworkInfo(),
-                fetchProcessInfo()
+                fetchProcessInfo(),
+                fetchHistoryInfo()
             ]);
             document.getElementById('lastUpdate').textContent = 
                 'Última actualización: ' + new Date().toLocaleTimeString();
@@ -485,6 +531,36 @@
                 document.getElementById('processInfo').innerHTML = html || 'Sin información de procesos';
             } catch (e) {
                 document.getElementById('processInfo').innerHTML = '<span class="error">Error al cargar</span>';
+            }
+        }
+
+        async function fetchHistoryInfo() {
+            try {
+                const data = await fetchData('/api/proxy/history?limit=20');
+                const items = data.items || [];
+                const labels = items.map(item => {
+                    const date = new Date(item.timestamp);
+                    return date.toLocaleTimeString();
+                });
+                const cpuValues = items.map(item => item.cpu_usage_percent || 0);
+                const memoryValues = items.map(item => item.memory_percent || 0);
+
+                historyChart.data.labels = labels;
+                historyChart.data.datasets[0].data = cpuValues;
+                historyChart.data.datasets[1].data = memoryValues;
+                historyChart.update();
+
+                if (items.length > 0) {
+                    const avgCpu = cpuValues.reduce((a, b) => a + b, 0) / cpuValues.length;
+                    const avgMemory = memoryValues.reduce((a, b) => a + b, 0) / memoryValues.length;
+                    const last = items[items.length - 1];
+                    document.getElementById('historySummary').innerHTML =
+                        `Registros: ${items.length} | Ultimo host: ${last.hostname || 'N/A'} | Promedio CPU: ${avgCpu.toFixed(1)}% | Promedio Memoria: ${avgMemory.toFixed(1)}%`;
+                } else {
+                    document.getElementById('historySummary').textContent = 'Sin datos historicos disponibles.';
+                }
+            } catch (e) {
+                document.getElementById('historySummary').innerHTML = '<span class="error">Error al cargar historial</span>';
             }
         }
         

@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   api-service:
     build: 
@@ -12,16 +10,14 @@ services:
       - monitor-net
     environment:
       - PYTHONUNBUFFERED=1
+      - DB_PATH=/app/data/metrics.db
+      - SNAPSHOT_INTERVAL_SECONDS=30
     volumes:
       - /proc:/proc:ro  # Solo lectura para acceder a estadísticas del sistema
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: 512M
-        reservations:
-          cpus: '0.5'
-          memory: 256M
+      - api-data:/app/data
+    cpus: '1.0'
+    mem_limit: 512m
+    mem_reservation: 256m
     logging:
       driver: "json-file"
       options:
@@ -43,15 +39,11 @@ services:
       - API_URL=http://api-service:8000
       - PYTHONUNBUFFERED=1
     depends_on:
-      - api-service
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 256M
-        reservations:
-          cpus: '0.25'
-          memory: 128M
+      api-service:
+        condition: service_healthy
+    cpus: '0.5'
+    mem_limit: 256m
+    mem_reservation: 128m
     logging:
       driver: "json-file"
       options:
@@ -66,3 +58,7 @@ networks:
       config:
         - subnet: 172.25.0.0/16
           gateway: 172.25.0.1
+
+volumes:
+  api-data:
+    name: api-data
