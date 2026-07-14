@@ -1,6 +1,7 @@
 import asyncio
 import contextlib
 import os
+from datetime import datetime
 
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,7 +18,7 @@ app = FastAPI(
 # Configurar CORS para permitir acceso desde el dashboard
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:8080", "http://localhost:5000", "http://web-server:5000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -49,54 +50,60 @@ async def on_shutdown() -> None:
         with contextlib.suppress(asyncio.CancelledError):
             await snapshot_task
 
+# ====== ENDPOINTS PRINCIPALES ======
+
+@app.get("/health")
+async def health_check():
+    """Healthcheck para Docker"""
+    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+
 @app.get("/")
 async def root():
-    """Endpoint raíz - Información de la API"""
+    """Información de la API"""
     return {
         "service": "MC Infrastructure Monitor API",
         "version": "1.0.0",
-        "status": "running"
+        "status": "running",
+        "endpoints": [
+            "/status", "/cpu", "/memory",
+            "/disk", "/network", "/services", "/history"
+        ]
     }
 
-@app.get("/api/status")
+@app.get("/status")
 async def get_status():
-    """Obtiene estado completo del servidor"""
+    """Estado completo del servidor - Endpoint principal"""
     status = monitor.get_full_status()
     metrics_repository.save_snapshot(status)
     return status
 
-@app.get("/api/system")
-async def get_system_info():
-    """Obtiene información del sistema"""
-    return monitor.get_system_info()
-
-@app.get("/api/cpu")
+@app.get("/cpu")
 async def get_cpu_info():
-    """Obtiene información de CPU"""
+    """Información de CPU"""
     return monitor.get_cpu_info()
 
-@app.get("/api/memory")
+@app.get("/memory")
 async def get_memory_info():
-    """Obtiene información de memoria"""
+    """Información de memoria"""
     return monitor.get_memory_info()
 
-@app.get("/api/disk")
+@app.get("/disk")
 async def get_disk_info():
-    """Obtiene información de discos"""
+    """Información de discos"""
     return monitor.get_disk_info()
 
-@app.get("/api/network")
+@app.get("/network")
 async def get_network_info():
-    """Obtiene información de red"""
+    """Información de red"""
     return monitor.get_network_info()
 
-@app.get("/api/processes")
-async def get_process_info(limit: int = Query(default=10, le=50)):
-    """Obtiene información de procesos"""
-    return monitor.get_process_info(limit)
+@app.get("/services")
+async def get_services_info(limit: int = Query(default=10, ge=1, le=50)):
+    """Información de servicios/processes"""
+    return monitor.get_process_info(limit=limit)
 
 
-@app.get("/api/history")
+@app.get("/history")
 async def get_history(limit: int = Query(default=50, ge=1, le=1000)):
     """Obtiene historial persistente de métricas"""
     items = metrics_repository.get_history(limit)
@@ -105,5 +112,43 @@ async def get_history(limit: int = Query(default=50, ge=1, le=1000)):
         "items": items,
     }
 
+# ====== ENDPOINTS DE COMPATIBILIDAD ======
+
+@app.get("/api/status")
+async def get_status_alt():
+    """Alias para /status (compatibilidad)"""
+    return await get_status()
+
+@app.get("/api/cpu")
+async def get_cpu_alt():
+    """Alias para /cpu (compatibilidad)"""
+    return await get_cpu_info()
+
+@app.get("/api/memory")
+async def get_memory_alt():
+    """Alias para /memory (compatibilidad)"""
+    return await get_memory_info()
+
+@app.get("/api/disk")
+async def get_disk_alt():
+    """Alias para /disk (compatibilidad)"""
+    return await get_disk_info()
+
+@app.get("/api/network")
+async def get_network_alt():
+    """Alias para /network (compatibilidad)"""
+    return await get_network_info()
+
+@app.get("/api/processes")
+async def get_processes_alt(limit: int = Query(default=10, le=50)):
+    """Alias para /services (compatibilidad)"""
+    return await get_services_info(limit=limit)
+
+
+@app.get("/api/history")
+async def get_history_alt(limit: int = Query(default=50, ge=1, le=1000)):
+    """Alias para /history (compatibilidad)"""
+    return await get_history(limit=limit)
+
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=5000)

@@ -6,7 +6,7 @@ from datetime import datetime
 app = Flask(__name__)
 
 # URL de la API - usando el nombre del servicio en Docker
-API_BASE_URL = os.getenv('API_URL', 'http://api-service:8000')
+API_BASE_URL = os.getenv('API_URL', 'http://api-server:5000')
 
 def get_api_data(endpoint):
     """Obtiene datos de la API"""
@@ -27,46 +27,52 @@ def index():
 
 @app.route('/api/proxy/status')
 def proxy_status():
-    """Proxy para obtener estado completo"""
-    return jsonify(get_api_data('/api/status'))
-
-@app.route('/api/proxy/system')
-def proxy_system():
-    """Proxy para obtener información del sistema"""
-    return jsonify(get_api_data('/api/system'))
+    """Proxy para /status"""
+    return jsonify(get_api_data('/status'))
 
 @app.route('/api/proxy/cpu')
 def proxy_cpu():
-    """Proxy para obtener información de CPU"""
-    return jsonify(get_api_data('/api/cpu'))
+    """Proxy para /cpu"""
+    return jsonify(get_api_data('/cpu'))
 
 @app.route('/api/proxy/memory')
 def proxy_memory():
-    """Proxy para obtener información de memoria"""
-    return jsonify(get_api_data('/api/memory'))
+    """Proxy para /memory"""
+    return jsonify(get_api_data('/memory'))
 
 @app.route('/api/proxy/disk')
 def proxy_disk():
-    """Proxy para obtener información de discos"""
-    return jsonify(get_api_data('/api/disk'))
+    """Proxy para /disk"""
+    return jsonify(get_api_data('/disk'))
 
 @app.route('/api/proxy/network')
 def proxy_network():
-    """Proxy para obtener información de red"""
-    return jsonify(get_api_data('/api/network'))
+    """Proxy para /network"""
+    return jsonify(get_api_data('/network'))
 
-@app.route('/api/proxy/processes')
-def proxy_processes():
-    """Proxy para obtener información de procesos"""
+@app.route('/api/proxy/services')
+def proxy_services():
+    """Proxy para /services (procesos)"""
     limit = request.args.get('limit', 10)
-    return jsonify(get_api_data(f'/api/processes?limit={limit}'))
+    return jsonify(get_api_data(f'/services?limit={limit}'))
 
 
 @app.route('/api/proxy/history')
 def proxy_history():
-    """Proxy para obtener historial de métricas"""
+    """Proxy para /history"""
     limit = request.args.get('limit', 20)
-    return jsonify(get_api_data(f'/api/history?limit={limit}'))
+    return jsonify(get_api_data(f'/history?limit={limit}'))
+
+# Mantener compatibilidad con endpoints antiguos
+@app.route('/api/proxy/processes')
+def proxy_processes_alt():
+    """Alias para compatibilidad"""
+    return proxy_services()
+
+@app.route('/health')
+def health():
+    """Healthcheck para el dashboard"""
+    return jsonify({"status": "healthy", "timestamp": datetime.now().isoformat()})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=False)

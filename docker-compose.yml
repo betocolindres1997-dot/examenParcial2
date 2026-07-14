@@ -1,19 +1,22 @@
 services:
-  api-service:
+  # Servicio API - Cambio de nombre y puerto
+  api-server:
     build: 
       context: ./api-service
       dockerfile: Dockerfile
-    container_name: mc-api-service
-    hostname: api-service
+    container_name: mc-api-server
+    hostname: api-server
     restart: unless-stopped
     networks:
       - monitor-net
     environment:
       - PYTHONUNBUFFERED=1
+      - ENVIRONMENT=production
       - DB_PATH=/app/data/metrics.db
       - SNAPSHOT_INTERVAL_SECONDS=30
     volumes:
-      - /proc:/proc:ro  # Solo lectura para acceder a estadísticas del sistema
+      - /proc:/proc:ro
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
       - api-data:/app/data
     cpus: '1.0'
     mem_limit: 512m
@@ -23,23 +26,32 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    # Healthcheck mejorado
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as r, sys; urls=['http://localhost:5000/health','http://localhost:8000/health','http://localhost:5000/','http://localhost:8000/']; ok=False\nfor u in urls:\n    try:\n        r.urlopen(u, timeout=3); ok=True; break\n    except Exception:\n        pass\nsys.exit(0 if ok else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
-  dashboard-service:
+  # Servicio Dashboard - Cambio de puerto
+  web-server:
     build:
       context: ./dashboard-service
       dockerfile: Dockerfile
-    container_name: mc-dashboard
-    hostname: dashboard-service
+    container_name: mc-web-server
+    hostname: web-server
     restart: unless-stopped
     ports:
-      - "5000:5000"
+      - "8080:5000"  # ← Cambio a puerto 8080
     networks:
       - monitor-net
     environment:
-      - API_URL=http://api-service:8000
+      - API_URL=http://api-server:5000  # ← Cambio de nombre
       - PYTHONUNBUFFERED=1
+      - FLASK_ENV=production
     depends_on:
-      api-service:
+      api-server:
         condition: service_healthy
     cpus: '0.5'
     mem_limit: 256m

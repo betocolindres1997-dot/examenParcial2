@@ -252,49 +252,26 @@
     
     <script>
         let cpuChart, memoryChart, historyChart;
-        
-        // Inicializar gráficos
+
         function initCharts() {
             const ctx1 = document.getElementById('cpuChart').getContext('2d');
             cpuChart = new Chart(ctx1, {
                 type: 'doughnut',
                 data: {
                     labels: ['Usado', 'Libre'],
-                    datasets: [{
-                        data: [0, 100],
-                        backgroundColor: ['#667eea', '#e2e8f0']
-                    }]
+                    datasets: [{ data: [0, 100], backgroundColor: ['#667eea', '#e2e8f0'] }]
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom'
-                        }
-                    }
-                }
+                options: { responsive: true, maintainAspectRatio: false }
             });
-            
+
             const ctx2 = document.getElementById('memoryChart').getContext('2d');
             memoryChart = new Chart(ctx2, {
                 type: 'doughnut',
                 data: {
                     labels: ['Usado', 'Disponible'],
-                    datasets: [{
-                        data: [0, 100],
-                        backgroundColor: ['#764ba2', '#e2e8f0']
-                    }]
+                    datasets: [{ data: [0, 100], backgroundColor: ['#764ba2', '#e2e8f0'] }]
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom'
-                        }
-                    }
-                }
+                options: { responsive: true, maintainAspectRatio: false }
             });
 
             const ctx3 = document.getElementById('historyChart').getContext('2d');
@@ -308,16 +285,16 @@
                             data: [],
                             borderColor: '#2563eb',
                             backgroundColor: 'rgba(37, 99, 235, 0.2)',
-                            tension: 0.35,
                             fill: false,
+                            tension: 0.35
                         },
                         {
                             label: 'Memoria %',
                             data: [],
                             borderColor: '#7c3aed',
                             backgroundColor: 'rgba(124, 58, 237, 0.2)',
-                            tension: 0.35,
                             fill: false,
+                            tension: 0.35
                         }
                     ]
                 },
@@ -325,250 +302,164 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
-                        y: {
-                            beginAtZero: true,
-                            max: 100
-                        }
+                        y: { beginAtZero: true, max: 100 }
                     }
                 }
             });
         }
-        
-        // Actualizar todos los datos
-        async function refreshAll() {
-            showError(null);
-            await Promise.all([
-                fetchSystemInfo(),
-                fetchCPUInfo(),
-                fetchMemoryInfo(),
-                fetchDiskInfo(),
-                fetchNetworkInfo(),
-                fetchProcessInfo(),
-                fetchHistoryInfo()
-            ]);
-            document.getElementById('lastUpdate').textContent = 
-                'Última actualización: ' + new Date().toLocaleTimeString();
-        }
-        
+
         async function fetchData(endpoint) {
-            try {
-                const response = await fetch(endpoint);
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                return await response.json();
-            } catch (error) {
-                showError(`Error al conectar con la API: ${error.message}`);
-                throw error;
+            const response = await fetch(endpoint);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
             }
+            return await response.json();
         }
-        
+
         function showError(message) {
             const container = document.getElementById('errorContainer');
+            const badge = document.getElementById('apiStatus');
+
             if (message) {
                 container.style.display = 'block';
                 container.textContent = message;
-                document.getElementById('apiStatus').className = 'status-badge status-offline';
-                document.getElementById('apiStatus').textContent = 'API Offline';
+                badge.className = 'status-badge status-offline';
+                badge.textContent = 'API Offline';
             } else {
                 container.style.display = 'none';
-                document.getElementById('apiStatus').className = 'status-badge status-online';
-                document.getElementById('apiStatus').textContent = 'API Online';
+                badge.className = 'status-badge status-online';
+                badge.textContent = 'API Online';
             }
         }
-        
-        async function fetchSystemInfo() {
+
+        async function refreshAll() {
             try {
-                const data = await fetchData('/api/proxy/system');
-                document.getElementById('systemInfo').innerHTML = `
-                    <div class="metric">
-                        <span class="metric-label">Hostname:</span>
-                        <span class="metric-value">${data.hostname || 'N/A'}</span>
-                    </div>
-                    <div class="metric">
-                        <span class="metric-label">Sistema:</span>
-                        <span class="metric-value">${data.platform || 'N/A'}</span>
-                    </div>
-                    <div class="metric">
-                        <span class="metric-label">Arquitectura:</span>
-                        <span class="metric-value">${data.architecture || 'N/A'}</span>
-                    </div>
-                    <div class="metric">
-                        <span class="metric-label">Procesador:</span>
-                        <span class="metric-value">${data.processor || 'N/A'}</span>
+                showError(null);
+                const data = await fetchData('/api/proxy/status');
+                renderSystem(data.system || {});
+                renderCPU(data.cpu || {});
+                renderMemory(data.memory || {});
+                renderDisk(data.disk || {});
+                renderNetwork(data.network || {});
+                renderProcesses(data.processes || {});
+                await fetchHistoryInfo();
+
+                document.getElementById('lastUpdate').textContent =
+                    'Última actualización: ' + new Date().toLocaleTimeString();
+            } catch (error) {
+                showError(`Error al conectar con la API: ${error.message}`);
+            }
+        }
+
+        function renderSystem(system) {
+            document.getElementById('systemInfo').innerHTML = `
+                <div class="metric"><span class="metric-label">Hostname:</span><span class="metric-value">${system.hostname || 'N/A'}</span></div>
+                <div class="metric"><span class="metric-label">Sistema:</span><span class="metric-value">${system.platform || 'N/A'}</span></div>
+                <div class="metric"><span class="metric-label">Arquitectura:</span><span class="metric-value">${system.architecture || 'N/A'}</span></div>
+                <div class="metric"><span class="metric-label">Procesador:</span><span class="metric-value">${system.processor || 'N/A'}</span></div>
+            `;
+        }
+
+        function renderCPU(cpu) {
+            const usage = cpu.cpu_usage_percent || 0;
+            document.getElementById('cpuProgress').style.width = usage + '%';
+            document.getElementById('cpuProgress').textContent = usage.toFixed(1) + '%';
+
+            document.getElementById('cpuInfo').innerHTML = `
+                <div class="metric"><span class="metric-label">Núcleos Físicos:</span><span class="metric-value">${cpu.cpu_count_physical || 'N/A'}</span></div>
+                <div class="metric"><span class="metric-label">Núcleos Lógicos:</span><span class="metric-value">${cpu.cpu_count_logical || 'N/A'}</span></div>
+                <div class="metric"><span class="metric-label">Frecuencia:</span><span class="metric-value">${cpu.cpu_frequency_current ? cpu.cpu_frequency_current.toFixed(0) + ' MHz' : 'N/A'}</span></div>
+            `;
+
+            cpuChart.data.datasets[0].data = [usage, 100 - usage];
+            cpuChart.update();
+        }
+
+        function renderMemory(memory) {
+            const memoryPercent = memory.memory_percent || 0;
+            document.getElementById('memoryProgress').style.width = memoryPercent + '%';
+            document.getElementById('memoryProgress').textContent = memoryPercent + '%';
+
+            document.getElementById('memoryInfo').innerHTML = `
+                <div class="metric"><span class="metric-label">Total:</span><span class="metric-value">${memory.memory_total_gb || 0} GB</span></div>
+                <div class="metric"><span class="metric-label">Usado:</span><span class="metric-value">${memory.memory_used_gb || 0} GB</span></div>
+                <div class="metric"><span class="metric-label">Disponible:</span><span class="metric-value">${memory.memory_available_gb || 0} GB</span></div>
+                <div class="metric"><span class="metric-label">Swap:</span><span class="metric-value">${memory.swap_percent || 0}%</span></div>
+            `;
+
+            memoryChart.data.datasets[0].data = [memoryPercent, 100 - memoryPercent];
+            memoryChart.update();
+        }
+
+        function renderDisk(disk) {
+            const partitions = disk.partitions || [];
+            let html = '';
+            partitions.forEach(part => {
+                html += `
+                    <div style="margin-bottom: 15px; padding: 10px; background: #f7fafc; border-radius: 5px;">
+                        <strong>${part.mountpoint}</strong> (${part.device})
+                        <div class="progress-bar" style="margin-top: 10px;">
+                            <div class="progress-fill" style="width: ${part.percent}%">${part.percent}%</div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 5px; font-size: 12px;">
+                            <span>Usado: ${part.used_gb} GB</span>
+                            <span>Total: ${part.total_gb} GB</span>
+                        </div>
                     </div>
                 `;
-            } catch (e) {
-                document.getElementById('systemInfo').innerHTML = '<span class="error">Error al cargar</span>';
-            }
+            });
+            document.getElementById('diskInfo').innerHTML = html || 'Sin información de discos';
         }
-        
-        async function fetchCPUInfo() {
-            try {
-                const data = await fetchData('/api/proxy/cpu');
-                const usage = data.cpu_usage_percent || 0;
-                document.getElementById('cpuProgress').style.width = usage + '%';
-                document.getElementById('cpuProgress').textContent = usage.toFixed(1) + '%';
-                
-                document.getElementById('cpuInfo').innerHTML = `
-                    <div class="metric">
-                        <span class="metric-label">Núcleos Físicos:</span>
-                        <span class="metric-value">${data.cpu_count_physical || 'N/A'}</span>
-                    </div>
-                    <div class="metric">
-                        <span class="metric-label">Núcleos Lógicos:</span>
-                        <span class="metric-value">${data.cpu_count_logical || 'N/A'}</span>
-                    </div>
-                    <div class="metric">
-                        <span class="metric-label">Frecuencia:</span>
-                        <span class="metric-value">${data.cpu_frequency_current ? data.cpu_frequency_current.toFixed(0) + ' MHz' : 'N/A'}</span>
+
+        function renderNetwork(network) {
+            document.getElementById('networkInfo').innerHTML = `
+                <div class="metric"><span class="metric-label">Datos Enviados:</span><span class="metric-value">${network.bytes_sent_gb || 0} GB</span></div>
+                <div class="metric"><span class="metric-label">Datos Recibidos:</span><span class="metric-value">${network.bytes_received_gb || 0} GB</span></div>
+                <div class="metric"><span class="metric-label">Paquetes Enviados:</span><span class="metric-value">${network.packets_sent || 0}</span></div>
+                <div class="metric"><span class="metric-label">Paquetes Recibidos:</span><span class="metric-value">${network.packets_received || 0}</span></div>
+            `;
+        }
+
+        function renderProcesses(processes) {
+            const items = processes.top_processes || [];
+            let html = '';
+            items.forEach(proc => {
+                html += `
+                    <div class="process-item">
+                        <span>${proc.name || 'Unknown'} (PID: ${proc.pid})</span>
+                        <span style="color: #667eea; font-weight: bold;">CPU: ${(proc.cpu_percent || 0).toFixed(1)}%</span>
                     </div>
                 `;
-                
-                cpuChart.data.datasets[0].data = [usage, 100 - usage];
-                cpuChart.update();
-            } catch (e) {
-                document.getElementById('cpuInfo').innerHTML = '<span class="error">Error al cargar</span>';
-            }
-        }
-        
-        async function fetchMemoryInfo() {
-            try {
-                const data = await fetchData('/api/proxy/memory');
-                document.getElementById('memoryProgress').style.width = data.memory_percent + '%';
-                document.getElementById('memoryProgress').textContent = data.memory_percent + '%';
-                
-                document.getElementById('memoryInfo').innerHTML = `
-                    <div class="metric">
-                        <span class="metric-label">Total:</span>
-                        <span class="metric-value">${data.memory_total_gb || 0} GB</span>
-                    </div>
-                    <div class="metric">
-                        <span class="metric-label">Usado:</span>
-                        <span class="metric-value">${data.memory_used_gb || 0} GB</span>
-                    </div>
-                    <div class="metric">
-                        <span class="metric-label">Disponible:</span>
-                        <span class="metric-value">${data.memory_available_gb || 0} GB</span>
-                    </div>
-                    <div class="metric">
-                        <span class="metric-label">Swap:</span>
-                        <span class="metric-value">${data.swap_percent || 0}%</span>
-                    </div>
-                `;
-                
-                memoryChart.data.datasets[0].data = [data.memory_percent || 0, 100 - (data.memory_percent || 0)];
-                memoryChart.update();
-            } catch (e) {
-                document.getElementById('memoryInfo').innerHTML = '<span class="error">Error al cargar</span>';
-            }
-        }
-        
-        async function fetchDiskInfo() {
-            try {
-                const data = await fetchData('/api/proxy/disk');
-                let html = '';
-                if (data.partitions) {
-                    data.partitions.forEach(part => {
-                        html += `
-                            <div style="margin-bottom: 15px; padding: 10px; background: #f7fafc; border-radius: 5px;">
-                                <strong>${part.mountpoint}</strong> (${part.device})
-                                <div class="progress-bar" style="margin-top: 10px;">
-                                    <div class="progress-fill" style="width: ${part.percent}%">${part.percent}%</div>
-                                </div>
-                                <div style="display: flex; justify-content: space-between; margin-top: 5px; font-size: 12px;">
-                                    <span>Usado: ${part.used_gb} GB</span>
-                                    <span>Total: ${part.total_gb} GB</span>
-                                </div>
-                            </div>
-                        `;
-                    });
-                }
-                document.getElementById('diskInfo').innerHTML = html || 'Sin información de discos';
-            } catch (e) {
-                document.getElementById('diskInfo').innerHTML = '<span class="error">Error al cargar</span>';
-            }
-        }
-        
-        async function fetchNetworkInfo() {
-            try {
-                const data = await fetchData('/api/proxy/network');
-                document.getElementById('networkInfo').innerHTML = `
-                    <div class="metric">
-                        <span class="metric-label">Datos Enviados:</span>
-                        <span class="metric-value">${data.bytes_sent_gb || 0} GB</span>
-                    </div>
-                    <div class="metric">
-                        <span class="metric-label">Datos Recibidos:</span>
-                        <span class="metric-value">${data.bytes_received_gb || 0} GB</span>
-                    </div>
-                    <div class="metric">
-                        <span class="metric-label">Paquetes Enviados:</span>
-                        <span class="metric-value">${data.packets_sent || 0}</span>
-                    </div>
-                    <div class="metric">
-                        <span class="metric-label">Paquetes Recibidos:</span>
-                        <span class="metric-value">${data.packets_received || 0}</span>
-                    </div>
-                `;
-            } catch (e) {
-                document.getElementById('networkInfo').innerHTML = '<span class="error">Error al cargar</span>';
-            }
-        }
-        
-        async function fetchProcessInfo() {
-            try {
-                const data = await fetchData('/api/proxy/processes?limit=10');
-                let html = '';
-                if (data.top_processes) {
-                    data.top_processes.forEach(proc => {
-                        html += `
-                            <div class="process-item">
-                                <span>${proc.name || 'Unknown'} (PID: ${proc.pid})</span>
-                                <span style="color: #667eea; font-weight: bold;">CPU: ${proc.cpu_percent?.toFixed(1) || 0}%</span>
-                            </div>
-                        `;
-                    });
-                }
-                document.getElementById('processInfo').innerHTML = html || 'Sin información de procesos';
-            } catch (e) {
-                document.getElementById('processInfo').innerHTML = '<span class="error">Error al cargar</span>';
-            }
+            });
+            document.getElementById('processInfo').innerHTML = html || 'Sin información de procesos';
         }
 
         async function fetchHistoryInfo() {
-            try {
-                const data = await fetchData('/api/proxy/history?limit=20');
-                const items = data.items || [];
-                const labels = items.map(item => {
-                    const date = new Date(item.timestamp);
-                    return date.toLocaleTimeString();
-                });
-                const cpuValues = items.map(item => item.cpu_usage_percent || 0);
-                const memoryValues = items.map(item => item.memory_percent || 0);
+            const data = await fetchData('/api/proxy/history?limit=20');
+            const items = data.items || [];
+            const labels = items.map(item => new Date(item.timestamp).toLocaleTimeString());
+            const cpuValues = items.map(item => item.cpu_usage_percent || 0);
+            const memoryValues = items.map(item => item.memory_percent || 0);
 
-                historyChart.data.labels = labels;
-                historyChart.data.datasets[0].data = cpuValues;
-                historyChart.data.datasets[1].data = memoryValues;
-                historyChart.update();
+            historyChart.data.labels = labels;
+            historyChart.data.datasets[0].data = cpuValues;
+            historyChart.data.datasets[1].data = memoryValues;
+            historyChart.update();
 
-                if (items.length > 0) {
-                    const avgCpu = cpuValues.reduce((a, b) => a + b, 0) / cpuValues.length;
-                    const avgMemory = memoryValues.reduce((a, b) => a + b, 0) / memoryValues.length;
-                    const last = items[items.length - 1];
-                    document.getElementById('historySummary').innerHTML =
-                        `Registros: ${items.length} | Ultimo host: ${last.hostname || 'N/A'} | Promedio CPU: ${avgCpu.toFixed(1)}% | Promedio Memoria: ${avgMemory.toFixed(1)}%`;
-                } else {
-                    document.getElementById('historySummary').textContent = 'Sin datos historicos disponibles.';
-                }
-            } catch (e) {
-                document.getElementById('historySummary').innerHTML = '<span class="error">Error al cargar historial</span>';
+            if (items.length > 0) {
+                const avgCpu = cpuValues.reduce((a, b) => a + b, 0) / cpuValues.length;
+                const avgMemory = memoryValues.reduce((a, b) => a + b, 0) / memoryValues.length;
+                const last = items[items.length - 1];
+                document.getElementById('historySummary').textContent =
+                    `Registros: ${items.length} | Ultimo host: ${last.hostname || 'N/A'} | Promedio CPU: ${avgCpu.toFixed(1)}% | Promedio Memoria: ${avgMemory.toFixed(1)}%`;
+            } else {
+                document.getElementById('historySummary').textContent = 'Sin datos historicos disponibles.';
             }
         }
-        
-        // Inicializar
+
         document.addEventListener('DOMContentLoaded', () => {
             initCharts();
             refreshAll();
-            // Actualizar cada 30 segundos
             setInterval(refreshAll, 30000);
         });
     </script>
