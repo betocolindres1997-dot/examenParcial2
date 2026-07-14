@@ -177,6 +177,50 @@
         .refresh-btn:hover {
             background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
         }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .secondary-btn {
+            background: #1f2937;
+            color: #dbeafe;
+            border: 1px solid #374151;
+            padding: 10px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .secondary-btn:hover {
+            background: #273449;
+        }
+
+        .connectivity-panel {
+            background: linear-gradient(160deg, #0f172a 0%, #111827 100%);
+            border: 1px solid #334155;
+            border-radius: 10px;
+            padding: 14px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .connectivity-title {
+            color: #bfdbfe;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .status-ok {
+            color: #34d399;
+            font-weight: 700;
+        }
+
+        .status-fail {
+            color: #f87171;
+            font-weight: 700;
+        }
         
         .error {
             color: #fecaca;
@@ -205,8 +249,16 @@
                     <span class="status-badge status-online" id="apiStatus">API Online</span>
                     <span id="lastUpdate" style="margin-left: 20px;"></span>
                 </div>
-                <button class="refresh-btn" onclick="refreshAll()">🔄 Actualizar</button>
+                <div class="btn-group">
+                    <button class="secondary-btn" onclick="toggleConnectivityPanel()">🔌 Ver comunicación</button>
+                    <button class="refresh-btn" onclick="refreshAll()">🔄 Actualizar</button>
+                </div>
             </div>
+        </div>
+
+        <div class="connectivity-panel" id="connectivityPanel">
+            <div class="connectivity-title">Diagnóstico de comunicación entre contenedores</div>
+            <div id="connectivityInfo">Presiona "Ver comunicación" para ejecutar la prueba.</div>
         </div>
         
         <div id="errorContainer" class="error" style="display: none;"></div>
@@ -335,6 +387,37 @@
                 throw new Error(`HTTP ${response.status}`);
             }
             return await response.json();
+        }
+
+        function toggleConnectivityPanel() {
+            const panel = document.getElementById('connectivityPanel');
+            const isHidden = panel.style.display === 'none' || panel.style.display === '';
+            panel.style.display = isHidden ? 'block' : 'none';
+            if (isHidden) {
+                refreshConnectivityInfo();
+            }
+        }
+
+        async function refreshConnectivityInfo() {
+            const container = document.getElementById('connectivityInfo');
+            container.textContent = 'Ejecutando diagnóstico...';
+
+            try {
+                const data = await fetchData('/api/proxy/connectivity');
+                const dnsState = data.dns_ok ? '<span class="status-ok">OK</span>' : '<span class="status-fail">FALLA</span>';
+                const httpState = data.http_ok ? '<span class="status-ok">OK</span>' : '<span class="status-fail">FALLA</span>';
+
+                container.innerHTML = `
+                    <div class="metric"><span class="metric-label">API URL:</span><span class="metric-value">${data.api_base_url}</span></div>
+                    <div class="metric"><span class="metric-label">Resolución DNS (api-server):</span><span class="metric-value">${dnsState} ${data.dns_ip ? `(${data.dns_ip})` : ''}</span></div>
+                    <div class="metric"><span class="metric-label">Conectividad HTTP /health:</span><span class="metric-value">${httpState} ${data.http_status ? `(HTTP ${data.http_status})` : ''}</span></div>
+                    <div class="metric"><span class="metric-label">Latencia:</span><span class="metric-value">${data.latency_ms !== null ? `${data.latency_ms} ms` : 'N/A'}</span></div>
+                    <div class="metric"><span class="metric-label">Última prueba:</span><span class="metric-value">${new Date(data.timestamp).toLocaleString()}</span></div>
+                    ${data.error ? `<div class="error" style="margin-top: 10px; display: block;">${data.error}</div>` : ''}
+                `;
+            } catch (error) {
+                container.innerHTML = `<div class="error" style="display:block;">Error en diagnóstico: ${error.message}</div>`;
+            }
         }
 
         function showError(message) {

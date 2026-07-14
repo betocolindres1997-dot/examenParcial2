@@ -1,6 +1,8 @@
 from flask import Flask, render_template, jsonify, request
 import requests
 import os
+import socket
+import time
 from datetime import datetime
 
 app = Flask(__name__)
@@ -62,6 +64,38 @@ def proxy_history():
     """Proxy para /history"""
     limit = request.args.get('limit', 20)
     return jsonify(get_api_data(f'/history?limit={limit}'))
+
+
+@app.route('/api/proxy/connectivity')
+def proxy_connectivity():
+    """Diagnóstico de comunicación entre web-server y api-server"""
+    api_host = API_BASE_URL.replace('http://', '').split(':')[0]
+    result = {
+        "timestamp": datetime.now().isoformat(),
+        "api_base_url": API_BASE_URL,
+        "dns_ok": False,
+        "dns_ip": None,
+        "http_ok": False,
+        "http_status": None,
+        "latency_ms": None,
+        "error": None,
+    }
+
+    try:
+        result["dns_ip"] = socket.gethostbyname(api_host)
+        result["dns_ok"] = True
+
+        started = time.perf_counter()
+        response = requests.get(f"{API_BASE_URL}/health", timeout=5)
+        elapsed = (time.perf_counter() - started) * 1000
+
+        result["http_status"] = response.status_code
+        result["latency_ms"] = round(elapsed, 2)
+        result["http_ok"] = response.status_code == 200
+    except Exception as exc:
+        result["error"] = str(exc)
+
+    return jsonify(result)
 
 # Mantener compatibilidad con endpoints antiguos
 @app.route('/api/proxy/processes')
