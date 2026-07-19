@@ -29,12 +29,12 @@ def add_rubric_section(doc: Document) -> None:
     rows = [
         ["1", "Separacion en 2 servicios", "Existen dos contenedores en ejecucion", "docker compose ps", "", "10"],
         ["2", "API REST funcional", "Respuesta JSON valida", "curl http://localhost:8000/ (o Swagger)", "", "10"],
-        ["3", "Dashboard Web funcional", "Vista web cargada", "Abrir http://localhost:5000", "", "10"],
+        ["3", "Dashboard Web funcional", "Vista web cargada", "Abrir http://localhost:8080", "", "10"],
         ["4", "Red Bridge personalizada", "Ambos servicios en monitor-net", "docker network inspect monitor-net", "", "15"],
-        ["5", "Resolucion DNS entre contenedores", "Dashboard consulta api-service", "docker compose exec dashboard-service python -c \"import requests; print(requests.get('http://api-service:8000/api/system', timeout=5).status_code)\"", "", "15"],
+        ["5", "Resolucion DNS entre contenedores", "Dashboard consulta api-server", "docker compose exec web-server python -c \"import requests; print(requests.get('http://api-server:5000/api/system', timeout=5).status_code)\"", "", "15"],
         ["6", "Administracion de recursos", "Limites CPU/memoria visibles", "docker compose config", "", "10"],
         ["7", "Healthchecks y disponibilidad", "Servicios healthy", "docker compose ps", "", "10"],
-        ["8", "Persistencia historica", "Registros en metrics_history", "docker compose exec api-service python -c \"import sqlite3; c=sqlite3.connect('/app/data/metrics.db'); print(c.execute('select count(*) from metrics_history').fetchone()[0])\"", "", "15"],
+        ["8", "Persistencia historica", "Registros en metrics_history", "docker compose exec api-server python -c \"import sqlite3; c=sqlite3.connect('/app/data/metrics.db'); print(c.execute('select count(*) from metrics_history').fetchone()[0])\"", "", "15"],
         ["9", "Endpoint de historial", "API devuelve historial", "Abrir http://localhost:8000/api/history?limit=10", "", "5"],
     ]
 
@@ -59,7 +59,7 @@ def add_evidence_checklist(doc: Document) -> None:
     items = [
         "Captura de docker compose ps con ambos contenedores Up/Healthy.",
         "Captura de docker network inspect monitor-net con ambos contenedores.",
-        "Captura del dashboard cargado en navegador (http://localhost:5000).",
+        "Captura del dashboard cargado en navegador (http://localhost:8080).",
         "Captura del endpoint /api/history devolviendo datos.",
         "Captura de consulta SQLite con conteo de registros historicos.",
     ]

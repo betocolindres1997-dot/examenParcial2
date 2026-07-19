@@ -77,6 +77,12 @@ async def get_status():
     metrics_repository.save_snapshot(status)
     return status
 
+
+@app.get("/system")
+async def get_system():
+    """Alias para /status (compatibilidad)"""
+    return await get_status()
+
 @app.get("/cpu")
 async def get_cpu_info():
     """Información de CPU"""
@@ -118,6 +124,12 @@ async def get_history(limit: int = Query(default=50, ge=1, le=1000)):
 async def get_status_alt():
     """Alias para /status (compatibilidad)"""
     return await get_status()
+
+
+@app.get("/api/system")
+async def get_system_alt():
+    """Alias para /system (compatibilidad)"""
+    return await get_system()
 
 @app.get("/api/cpu")
 async def get_cpu_alt():

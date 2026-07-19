@@ -32,6 +32,12 @@ def proxy_status():
     """Proxy para /status"""
     return jsonify(get_api_data('/status'))
 
+
+@app.route('/api/proxy/system')
+def proxy_system():
+    """Alias para /status (compatibilidad)"""
+    return jsonify(get_api_data('/system'))
+
 @app.route('/api/proxy/cpu')
 def proxy_cpu():
     """Proxy para /cpu"""

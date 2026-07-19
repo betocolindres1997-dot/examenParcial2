@@ -9,14 +9,14 @@ Este proyecto implementa dos servicios desacoplados que se comunican por una red
 1. `api-service` (FastAPI): expone metricas del sistema.
 2. `dashboard-service` (Flask): consume la API y muestra un dashboard web.
 
-La comunicacion entre servicios se realiza por nombre DNS interno de Docker (`http://api-service:8000`) dentro de la red `monitor-net`.
+La comunicacion entre servicios se realiza por nombre DNS interno de Docker (`http://api-server:5000`) dentro de la red `monitor-net`.
 
 ## Arquitectura
 
 ```mermaid
 flowchart LR
-		U[Usuario Navegador] -->|http://localhost:5000| D[dashboard-service Flask]
-		D -->|http://api-service:8000| A[api-service FastAPI]
+		U[Usuario Navegador] -->|http://localhost:8080| D[dashboard-service Flask]
+		D -->|http://api-server:5000| A[api-service FastAPI]
 		D --- N[(Docker Network Bridge monitor-net)]
 		A --- N
 ```
@@ -26,7 +26,8 @@ flowchart LR
 ### Servicio 1: API REST
 
 - Tecnologia: FastAPI + Uvicorn
-- Puerto interno: `8000`
+- Puerto interno: `5000`
+- Puerto publicado al host: `8000`
 - Funcion principal: recopilar metricas del sistema con `psutil`
 - Endpoints principales:
 	- `GET /api/status`
@@ -41,7 +42,8 @@ flowchart LR
 ### Servicio 2: Dashboard Web
 
 - Tecnologia: Flask + HTML/CSS/JS + Chart.js
-- Puerto publicado al host: `5000`
+- Puerto interno: `5000`
+- Puerto publicado al host: `8080`
 - Funcion principal: visualizar metricas consumiendo la API por proxy interno
 - Rutas proxy internas:
 	- `GET /api/proxy/system`
@@ -60,7 +62,7 @@ En `docker-compose.yml` se define la red:
 - Subred: `172.25.0.0/16`
 - Gateway: `172.25.0.1`
 
-Esto garantiza aislamiento de red y resolucion de nombres entre contenedores sin exponer la API al exterior.
+Esto garantiza aislamiento de red y resolucion de nombres entre contenedores; adicionalmente la API se publica al host en `http://localhost:8000`.
 
 ## Administracion de recursos
 
@@ -129,7 +131,7 @@ docker compose ps
 ### 1. Verificar API desde el contenedor dashboard
 
 ```bash
-docker compose exec dashboard-service python -c "import requests; print(requests.get('http://api-service:8000/api/system', timeout=5).status_code)"
+docker compose exec web-server python -c "import requests; print(requests.get('http://api-server:5000/api/system', timeout=5).status_code)"
 ```
 
 Debe responder `200`.
@@ -139,6 +141,7 @@ Debe responder `200`.
 Abrir en navegador:
 
 - `http://localhost:5000`
+- `http://localhost:8080`
 
 ### 3. Verificar red bridge personalizada
 
@@ -151,7 +154,7 @@ Debe mostrar ambos contenedores conectados a la misma red.
 ### 4. Verificar persistencia historica
 
 ```bash
-docker compose exec api-service python -c "import sqlite3; c=sqlite3.connect('/app/data/metrics.db'); print(c.execute('select count(*) from metrics_history').fetchone()[0])"
+docker compose exec api-server python -c "import sqlite3; c=sqlite3.connect('/app/data/metrics.db'); print(c.execute('select count(*) from metrics_history').fetchone()[0])"
 ```
 
 Debe mostrar un valor mayor a 0 despues de algunos segundos.
@@ -161,8 +164,8 @@ Debe mostrar un valor mayor a 0 despues de algunos segundos.
 Ver logs:
 
 ```bash
-docker compose logs -f api-service
-docker compose logs -f dashboard-service
+docker compose logs -f api-server
+docker compose logs -f web-server
 ```
 
 Detener y eliminar contenedores:
@@ -179,7 +182,8 @@ docker compose down -v
 
 ## Consideraciones tecnicas
 
-- El dashboard no llama a `localhost:8000`; usa `http://api-service:8000` por DNS interno de Docker.
+- El dashboard no llama a `localhost:8000`; usa `http://api-server:5000` por DNS interno de Docker.
+- El navegador del host no puede resolver `api-server` ni `api-service`; desde el navegador usa `http://localhost:8000` para la API y `http://localhost:8080` para el dashboard.
 - La API trabaja como servicio independiente y no depende del frontend.
 - El diseño es escalable: se pueden agregar mas APIs o dashboards en la misma red bridge.
 
@@ -187,9 +191,9 @@ docker compose down -v
 
 Al ejecutar el sistema:
 
-1. Se crean dos contenedores aislados (`mc-api-service` y `mc-dashboard`).
+1. Se crean dos contenedores aislados (`mc-api-server` y `mc-web-server`).
 2. Ambos se comunican por la red bridge `monitor-net`.
-3. El usuario visualiza metricas del servidor en `http://localhost:5000`.
+3. El usuario visualiza metricas del servidor en `http://localhost:8080`.
 4. El sistema conserva metricas historicas en SQLite aunque se reinicien contenedores.
 
 ## Evidencias de entrega academica
